@@ -9,6 +9,8 @@ import os
 import time
 import warnings
 import numpy as np
+from torch.utils.tensorboard import SummaryWriter
+tensorboard_log_dir = "/logs/tensorboard/"
 
 warnings.filterwarnings('ignore')
 
@@ -84,6 +86,9 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         path = os.path.join(self.args.checkpoints, setting)
         if not os.path.exists(path):
             os.makedirs(path)
+        # Tensorboard plot
+        writer = SummaryWriter(log_dir=str(path) + tensorboard_log_dir)
+        writer.flush()
 
         time_now = time.time()
 
@@ -163,6 +168,13 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
                 epoch + 1, train_steps, train_loss, vali_loss, test_loss))
+
+            writer.add_scalars('loss', {
+                'train': train_loss,
+                'valid': vali_loss,
+                'test': test_loss
+            }, epoch)
+
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")
@@ -222,7 +234,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     shape = outputs.shape
                     outputs = test_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
                     batch_y = test_data.inverse_transform(batch_y.squeeze(0)).reshape(shape)
-        
+
                 outputs = outputs[:, :, f_dim:]
                 batch_y = batch_y[:, :, f_dim:]
 
